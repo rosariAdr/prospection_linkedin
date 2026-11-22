@@ -8,7 +8,8 @@ seules étapes qui demandent du jugement, tout le reste est déterministe et scr
     python -m prospection.run finaliser --run 23-09-2026
 
 `prepare`   : lit les JSON des agents de scraping, filtre par date, déduplique contre
-              l'historique, écrit `a_scorer.json` et le rendement par mot-clé.
+              l'historique, écrit `a_scorer.json` et le rendement par mot-clé, et signale un
+              run incomplet (mots-clés non traités qu'aucune reprise n'a couverts).
 `finaliser` : relit les `scored_*.json`, passe les garde-fous, construit le classeur et
               exporte les CSV d'archive.
 """
@@ -23,6 +24,7 @@ import sys
 from typing import Any
 
 from . import __version__, config as cfg_mod
+from .cles import norm
 from .dedup import Historique, charger_candidats, dedupliquer, rendement_par_mot_cle
 from .verify import controler
 from .workbook import COLS, COLS_LEADS, construire
@@ -75,13 +77,20 @@ def cmd_prepare(args: argparse.Namespace) -> int:
         json.dump(gardes, fh, ensure_ascii=False, indent=1)
 
     rendement = rendement_par_mot_cle(candidats)
+    non_traites = _mots_cles_non_traites(bruts_fichiers)
+    # comparaison normalisée : un agent qui change la casse ou les accents d'un mot-clé ne doit
+    # pas le faire passer pour « sans résultat »
+    vus = {norm(k) for k, _ in rendement} | {norm(k) for k in non_traites}
     rapport = {
         "run": args.run, "version": __version__, "fichiers": [os.path.basename(f) for f in bruts_fichiers],
         "jours_max": args.jours, "bruts": rap.bruts, "hors_fenetre": rap.hors_fenetre,
         "deja_connus": rap.deja_connus, "doublons_internes": rap.doublons_internes,
         "nouveaux": rap.nouveaux, "meme_organisation": rap.meme_organisation,
         "rendement_par_mot_cle": rendement,
-        "mots_cles_sans_resultat": [k for k in cfg.mots_cles if k not in dict(rendement)],
+        "run_incomplet": bool(non_traites),
+        "mots_cles_non_traites": non_traites,
+        # un mot-clé jamais cherché n'est pas « sans résultat » : on ne le retire pas du plan
+        "mots_cles_sans_resultat": [k for k in cfg.mots_cles if norm(k) not in vus],
     }
     with open(os.path.join(d, "rapport_prepare.json"), "w", encoding="utf-8") as fh:
         json.dump(rapport, fh, ensure_ascii=False, indent=1)
@@ -95,7 +104,44 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     print("\nrendement par mot-clé :")
     for k, v in rendement:
         print(f"  {v:4d}  {k}")
+    if non_traites:
+        print(
+            f"\nRUN INCOMPLET : {len(non_traites)} mot(s)-clé(s) non traité(s) : "
+            f"{', '.join(non_traites)}. Reprendre le run au premier d'entre eux, jamais depuis "
+            "le début ; ce ne sont pas des mots-clés « sans résultat ».",
+            file=sys.stderr,
+        )
     return 0
+
+
+def _mots_cles_non_traites(fichiers: list[str]) -> list[str]:
+    """Mots-clés qu'un agent déclare non traités et qu'aucun autre lot du run n'a repris.
+
+    Un agent interrompu liste ses mots-clés restants dans `mots_cles_non_traites` (§12 de la
+    recette de scraping). Une reprise les traite dans un autre JSON du même run : ils figurent
+    alors dans ses `mots_cles_traites` et sortent de la liste. Les mots-clés se comparent
+    normalisés (casse, accents) ; le libellé rendu est celui du premier agent qui l'a écrit.
+    """
+    traites: set[str] = set()
+    restants: dict[str, str] = {}  # clé normalisée -> libellé
+    for f in fichiers:
+        with open(f, encoding="utf-8") as fh:
+            d = json.load(fh)
+        if not isinstance(d, dict):
+            continue
+        traites.update(norm(k) for k in _liste(d.get("mots_cles_traites")))
+        for k in _liste(d.get("mots_cles_non_traites")):
+            restants.setdefault(norm(k), k)
+    return [k for n, k in restants.items() if n not in traites]
+
+
+def _liste(v: Any) -> list[str]:
+    """Liste de mots-clés d'un JSON d'agent : une chaîne seule compte pour un mot-clé."""
+    if isinstance(v, str):
+        return [v] if v.strip() else []
+    if isinstance(v, list):
+        return [str(x) for x in v if str(x).strip()]
+    return []
 
 
 def cmd_finaliser(args: argparse.Namespace) -> int:
@@ -118,12 +164,6 @@ def cmd_finaliser(args: argparse.Namespace) -> int:
     posts = [p for p in posts if not cfg.est_blacklistee(p.get("auteur"))]
     for p in retires:
         print(f"  écarté (F4 blacklist) : {p.get('auteur')} (score {p.get('score_pertinence')})")
-    for p in posts:
-        if cfg.est_en_observation(p.get("auteur")):
-            p["commentaire_scoring"] = (
-                "⚠ organisation EN OBSERVATION (F4) : dernière tentative avant blacklist. "
-                + str(p.get("commentaire_scoring") or "")
-            )
 
     sous_seuil = [p for p in posts if not cfg.conserver(p.get("score_pertinence") or 0)]
     posts = [p for p in posts if cfg.conserver(p.get("score_pertinence") or 0)]
@@ -136,6 +176,15 @@ def cmd_finaliser(args: argparse.Namespace) -> int:
         for a in anomalies:
             print("  ⚠ ", a, file=sys.stderr)
         return 2
+
+    # l'avertissement F4 vient APRÈS les garde-fous : écrit dans `commentaire_scoring`, il
+    # masquerait un score non tracé
+    for p in posts:
+        if cfg.est_en_observation(p.get("auteur")):
+            p["commentaire_scoring"] = (
+                "⚠ organisation EN OBSERVATION (F4) : dernière tentative avant blacklist. "
+                + str(p.get("commentaire_scoring") or "")
+            )
 
     sortie = args.sortie or os.path.join("data", f"prospection_{args.run}.xlsx")
     os.makedirs(os.path.dirname(sortie) or ".", exist_ok=True)

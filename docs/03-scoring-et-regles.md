@@ -48,8 +48,14 @@ Cette séparation est essentielle : un deal-breaker n'est **pas** un malus, sino
 - Le distanciel ne rattrape pas un diplôme à obligation de présentiel.
 
 **F4 — Historique** : blacklist + organisations « en observation » (une seconde chance avant
-exclusion). La liste vit dans `data/blacklist.md` et **doit être relue à chaque run** : une ligne
-oubliée ici, et une organisation écartée ressort en tête du classement au run suivant.
+exclusion). La liste vit dans `data/config.yaml`, section `blacklist` (`organisations` et
+`en_observation`), et nulle part ailleurs : c'est là que `prospection.run finaliser` la lit pour
+écarter d'office une organisation blacklistée. Elle **doit être relue à chaque run** : une ligne
+oubliée ici, et une organisation écartée ressort en tête du classement au run suivant. Un ancien
+fichier `data/blacklist.md` n'est lu par aucun script : une organisation ajoutée seulement là
+n'est jamais écartée.
+⚠️ Le filet automatique compare la liste au champ `auteur` du post. Une organisation dont la
+personne qui recrute publie sous son propre nom n'est donc écartée qu'au scoring.
 
 ## 3. La grille de score
 
