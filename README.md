@@ -88,8 +88,10 @@ data/  runs/          données réelles, non versionnées (voir data/README.md)
 
 Les posts collectés contiennent des noms, des profils et des adresses de **personnes tierces** qui
 n'ont pas consenti à figurer dans un dépôt. `data/` et `runs/` sont donc **entièrement exclus de
-git**, et une vérification en intégration continue échoue si un fichier de données entre dans
-l'index. Le dépôt porte la méthode, jamais les données.
+git** par le `.gitignore`. Aucune vérification automatique ne le garantit encore (ni intégration
+continue, ni hook pre-commit) : un `git add -f` passerait. `git ls-files data runs` ne doit lister
+que `data/README.md`, `data/.gitkeep` et `runs/.gitkeep`. Le dépôt porte la méthode, jamais les
+données.
 
 ## Règles non négociables
 
