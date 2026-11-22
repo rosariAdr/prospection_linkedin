@@ -5,11 +5,17 @@ window.__isCand=function(t){
   return /(recrut|recherch|cherchons|cherche|besoin|rejoign|vivier|réseau d|appel à|candidat|postul)/i.test(t)
       && /(formateur|intervenant|enseignant|vacataire|professeur|jury)/i.test(t);
 };
-// Date relative : TOUJOURS suivie d'un « • » dans l'en-tête de carte (voir §8)
+// Date relative : TOUJOURS suivie d'un « • » dans l'en-tête de carte ; la DERNIÈRE fait foi (voir §8)
+window.__lastStamp=function(t){
+  const m=[...t.substring(0,600).matchAll(/(\d+)\s*(min|h|j|sem|mois|an)s?\s*(?=•)/g)];
+  return m.length ? m[m.length-1] : null;
+};
 window.__dateOf=function(card){
-  const t=(card.innerText||'').substring(0,600);
-  const m=[...t.matchAll(/(\d+)\s*(min|h|j|sem|mois|an)s?\s*(?=•)/g)];
-  return m.length ? m[m.length-1][0].trim() : '';
+  const d=window.__lastStamp(card.innerText||''); return d ? d[0].trim() : '';
+};
+// Corps du post : ce qui suit le dernier horodatage (même règle que prospection/cles.py)
+window.__corpsOf=function(txt){
+  const d=window.__lastStamp(txt); return d ? txt.substring(d.index+d[0].length) : txt;
 };
 window.__proc=async function(){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms)); let n=0;
@@ -17,7 +23,7 @@ window.__proc=async function(){
     const btn=card.querySelector('button[aria-label*="menu de commandes"]'); if(!btn) continue;
     const auteur=(btn.getAttribute('aria-label')||'').replace('Ouvrir le menu de commandes pour le post de ','').trim();
     const txt=(card.innerText||'').trim().replace(/\s+/g,' ');
-    const key=auteur+'|'+txt.substring(0,80);
+    const key=auteur+'|'+window.__corpsOf(txt).substring(0,80);
     if(window.__doneKeys.has(key)) continue; window.__doneKeys.add(key); n++;
     const dr=window.__dateOf(card);
     if(!window.__isCand(txt)){ window.__R.push({a:auteur, e:txt.substring(30,95)}); continue; }
@@ -32,6 +38,3 @@ window.__proc=async function(){
   return JSON.stringify({nouveaux:n, candidats:window.__H.length, rejetes:window.__R.length});
 };
 await window.__proc()
-```
-```javascript
-const p=window.__H[0]; JSON.stringify({i:0,a:p.auteur,pr:p.profil,l:p.link,d:p.date_rel,t:p.texte.substring(0,750)})

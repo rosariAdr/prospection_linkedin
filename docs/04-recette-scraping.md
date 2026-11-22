@@ -48,18 +48,23 @@ ici pour qu'il n'existe qu'un seul exemplaire à maintenir. L'injecter **verbati
 **Ce qu'il fait, et pourquoi chaque morceau est là :**
 - `Clipboard.prototype.writeText` est **remplacé** pour capturer le permalien que LinkedIn copie
   dans le presse-papiers — on ne peut pas le lire autrement.
-- `__doneKeys` évite de retraiter une carte recyclée par le conteneur virtualisé.
+- `__doneKeys` évite de retraiter une carte recyclée par le conteneur virtualisé. Sa clé porte
+  sur le **corps du post** (`__corpsOf`, ce qui suit le dernier horodatage) : calculée sur la
+  carte entière, elle se remplissait d'en-tête quand le titre de l'auteur est long, et le second
+  post du même auteur sur la page était sauté en silence.
 - Le **pré-filtre `__isCand`** évite d'ouvrir un menu et d'attendre 1,8 s pour un post
   manifestement hors sujet : c'est ce qui rend le run tenable en temps.
 - Les rejetés sont conservés en version compacte (`__R`) pour vérifier a posteriori que le
   pré-filtre n'a pas sur-exclu.
-- `__dateOf` prend la **dernière** occurrence d'un nombre suivi de « • » (voir §8).
+- `__lastStamp` prend la **dernière** occurrence d'un nombre suivi de « • » (voir §8) ;
+  `__dateOf` (la date) et `__corpsOf` (la coupe du corps) s'en servent tous les deux.
 - Le bouton de menu est repéré par son `aria-label`, seul élément stable de l'interface.
 
-**Les trois seules choses à adapter à un autre profil ou à une autre langue :**
+**Les seules choses à adapter à un autre profil ou à une autre langue :**
 | À adapter | Où |
 |---|---|
 | Verbes de recrutement + noms de rôles | les deux regex de `__isCand` |
+| Unités de la date relative (`min\|h\|j\|sem\|mois\|an`) | le motif de `__lastStamp` et `MOTIF_HORODATAGE` (`prospection/dates.py`), si l'interface n'est pas en français : sans elles, ni la date ni la coupe du corps ne fonctionnent |
 | `"menu de commandes"` → `"control menu"` | interface LinkedIn en anglais |
 | `/Copier le lien/i` → `/Copy link/i` | idem |
 
@@ -121,17 +126,24 @@ au lieu du permalien complet. Les liens fonctionnent, mais **la déduplication p
 le même post produit un code différent à chaque capture.
 
 ### Parade obligatoire : dédupliquer aussi par contenu
-```python
-import re, unicodedata
-def norm(s):
-    s = unicodedata.normalize('NFKD', str(s or '')).encode('ascii','ignore').decode()
-    return re.sub(r'[^a-z0-9]', '', s.lower())
+**Le code fait foi dans [`prospection/cles.py`](../prospection/cles.py)** (`cle_contenu`,
+`cle_secours`) ; il n'est pas recopié ici. Principe : une empreinte de l'auteur et du début du
+texte normalisé (sans accents, casse, ponctuation ni espaces), plus une empreinte du texte seul
+qui rattrape les reposts par un autre auteur.
 
-cle     = norm(auteur) + '|' + norm(texte)[:90]   # clé principale de secours
-cle_bis = norm(texte)[:120]                        # rattrape les reposts par un autre auteur
-```
-Testée sur 226 candidats : **45 doublons correctement écartés** là où la dédup par URL en avait
-détecté **0**. À appliquer même quand les permaliens fonctionnent.
+⚠️ **Les deux clés portent sur le corps du post seul**, coupé après le dernier horodatage
+(`corps_du_post`, même motif que §8). Le `texte` du harvester est la carte entière : en-tête
+compris, la clé changeait quand la date passait de « 3 j » à « 1 sem » (le post revenait au run
+suivant), et un titre long confondait deux annonces du même auteur.
+
+⚠️ **Historique d'avant ce changement** : les clés déjà enregistrées dans les colonnes
+`cle_contenu` / `cle_secours` d'un MASTER ou d'un CSV ont été calculées sur la carte entière et
+ne correspondent plus aux nouvelles. Seules les clés tirées des JSON bruts de `runs/` sont
+recalculées automatiquement (`Historique.ajouter_run`).
+
+Testée sur 226 candidats (août-septembre 2026, clé encore calculée sur la carte entière) :
+**45 doublons correctement écartés** là où la dédup par URL en avait détecté **0**. À appliquer
+même quand les permaliens fonctionnent.
 
 ### Résolution des liens courts
 Seulement pour les posts retenus : naviguer vers l'URL courte, lire l'URL finale (~5 s par lien).
@@ -143,7 +155,7 @@ Résoudre 100+ posts scorés 0 est du temps perdu.
 texte de la carte : le premier nombre rencontré est souvent celui du corps du post
 (« 3 ans d'expérience », « +1 500 personnes formées »), ce qui écarte à tort des posts récents.
 L'horodatage LinkedIn est **toujours suivi du séparateur `•`** — d'où le `(?=•)` et le choix de la
-**dernière** occurrence dans `__dateOf`.
+**dernière** occurrence dans `__lastStamp`, qu'utilisent `__dateOf` et `__corpsOf`.
 
 **Date illisible ⇒ garder le post**, et filtrer en post-traitement.
 

@@ -1,3 +1,5 @@
+import json
+
 from prospection.dedup import Historique, dedupliquer
 
 
@@ -24,6 +26,30 @@ def test_ecarte_ce_qui_est_deja_dans_l_historique():
     gardes2, rap = dedupliquer([_post("Ecole X", t)], hist)
     assert rap.deja_connus == 1
     assert gardes2 == []
+
+
+def test_un_post_recapture_une_semaine_plus_tard_est_reconnu(tmp_path):
+    """PL-01 : entre deux runs, la date relative de l'en-tête et le lien lnkd.in changent.
+
+    Le texte est celui du harvester (carte entière), et l'historique est chargé comme le fait
+    `run.py` : depuis le JSON brut du run précédent.
+    """
+    def carte(date):
+        return (f"Post du fil d’actualité Marie Dupont • 2e Responsable pédagogique {date} • "
+                "Suivre Nous cherchons un intervenant Python pour nos Master 2 à la rentrée.")
+
+    run_1 = tmp_path / "L1.json"
+    run_1.write_text(json.dumps({"candidats": [
+        {"auteur": "Marie Dupont", "texte": carte("3 j"), "date_rel": "3 j",
+         "url_post": "https://lnkd.in/p/aaa", "mot_cle": "kw"},
+    ]}), encoding="utf-8")
+    hist = Historique()
+    hist.ajouter_run(str(run_1))
+
+    run_2 = [_post("Marie Dupont", carte("1 sem"), date="1 sem", url="https://lnkd.in/p/bbb")]
+    gardes, rap = dedupliquer(run_2, hist)
+    assert rap.deja_connus == 1
+    assert gardes == []
 
 
 def test_filtre_par_fenetre_temporelle():
