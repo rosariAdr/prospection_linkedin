@@ -1,0 +1,88 @@
+# =============================================================================
+# CONFIGURATION PROFIL — gabarit
+# Copier vers data/config.yaml (gitignoré) et remplir. C'est LE seul fichier
+# spécifique à une personne : tout le reste du dépôt est générique.
+# =============================================================================
+version: 1
+profil:
+  nom: "Prénom Nom"
+  titre: "intitulé professionnel tel qu'il apparaît sur LinkedIn"
+  objectif: "missions d'enseignement | freelance | partenariats | ..."
+  diplome: "école et année"
+  structure: "structure de facturation, si freelance"
+  localisation: "ville (dpt), région"
+  mobilite: "rayon accepté / distanciel accepté ou non"
+  email: "prenom.nom@example.com"
+  tel: "00.00.00.00.00"
+  linkedin: "https://www.linkedin.com/in/..."
+  signature: "NOM Prénom"
+  experience_terrain: "années + clients/employeurs marquants + secteurs"
+  # L'argument principal de TOUS les messages : sans lui, ils sonnent creux.
+  experience_cible: ["organisation 1", "organisation 2"]
+  # Sert de filtre F2 : une annonce exigeant un outil absent d'ici est rejetée.
+  # Une liste trop large produit des faux positifs coûteux.
+  competences: ["outil 1", "domaine 2"]
+  certifications: []
+
+cible:
+  types_opportunite: ["annonce directe", "réseau / vivier", "à qualifier (distanciel ?)"]
+  niveaux: "niveaux visés, et celui qui est accepté mais pénalisé"
+  organisations: "types d'organisations cibles"
+  organisations_a_eviter: "types à exclure d'emblée"
+
+blacklist:
+  organisations: []          # exclusion immédiate, quel que soit le score
+  en_observation: []         # une dernière tentative avant blacklist
+  exceptions: []             # conservées malgré F1, sur décision explicite
+  competences_exclues: []    # enrichi à chaque rejet — alimente F2
+
+conditions:
+  zone_ou_distanciel_min_eur_h: 45
+  hors_zone_presentiel_min_eur_h: 65
+  hors_zone_presentiel_min_eur_j: 450
+  hors_pays_presentiel_autorise: false
+  taux_non_annonce: "à déterminer"   # jamais une cause d'exclusion
+
+scoring:
+  criteres:
+    annonce_explicite: 4
+    domaine_coeur: 3
+    zone_cible: 2
+    distanciel: 2              # mettre 0 si le distanciel n'a pas de sens pour ce profil
+    niveau_bac45: 2
+    niveau_bac3: 1
+    niveau_bts: -3             # le niveau accepté « par défaut » mais jamais avec plaisir
+    taux_annonce_eleve: 2
+    vivier: 2
+    formation_entreprise: 2
+    contact_direct: 1
+    volume_recurrence: 1
+    post_generique: -2
+  remuneration_seuil_eur_h: 60
+  seuil_conservation: 3
+  seuil_redaction: 5           # strictement supérieur
+
+messages:
+  note_invitation_200_max: 200
+  note_invitation_300_max: 300
+  message_linkedin_lignes_max: 10
+  mail_mots_cible: [150, 220]
+
+search_plan:
+  filtre_defaut: "past-week"
+  # Un mot-clé = <rôle recherché> + <domaine/outil>. Viser 40 à 50 au total,
+  # répartis en 3 lots d'égale taille (un par agent).
+  lots:
+    A: []
+    B: []
+    C: []
+  noyau_prioritaire: []        # MESURÉ après le premier run complet, jamais deviné
+  retires: []                  # 0 résultat sur plusieurs runs
+  decouverte: ["recherche <rôle>", "recrute <rôle>", "cherchons <rôle>", "appel à <rôle>"]
+
+cadence:
+  veille: "quotidienne rotative | bi-hebdomadaire | hebdomadaire"
+  creneau: "heure à laquelle la machine est allumée"
+  jours: "lun-ven"
+  decouverte_mensuelle: "dernier dimanche du mois"
+  autonomie: "full-auto | validation avant rédaction des messages"

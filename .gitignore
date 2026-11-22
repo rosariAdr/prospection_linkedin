@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# DONNÉES PERSONNELLES — rien de tout cela ne doit entrer dans l'historique git.
+# Le dépôt peut être public : il contient la MÉTHODE, jamais les données.
+# ---------------------------------------------------------------------------
+data/*
+!data/.gitkeep
+!data/README.md
+
+# Résultats de run (posts scrapés, profils, adresses de tiers)
+runs/*
+!runs/.gitkeep
+
+# Classeurs et exports
+*.xlsx
+*.xlsm
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Systèmes
+.DS_Store
+Thumbs.db
+
+# Claude Code — copies de travail (worktrees) et réglages locaux
+.claude/worktrees/
+.claude/settings.local.json
