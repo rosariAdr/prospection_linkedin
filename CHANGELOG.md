@@ -31,6 +31,10 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ### Ajouté
 - `tests/test_run.py` : tests fonctionnels de `prepare` et `finaliser` sur un faux dépôt temporaire
   (PL-10).
+- Intégration continue GitHub Actions (`.github/workflows/porte.yml`) : la porte tourne à chaque PR
+  vers `dev` ou `main` et à chaque push sur ces branches, sous Python 3.10 et 3.13.
+  `tests/test_anti_fuite.py` la fait échouer si une donnée personnelle (`data/`, `runs/`, classeur,
+  export) ou une copie de travail `.claude/` est suivie par git (PL-08).
 
 ## [1.0.0] — 2026-09-24
 
