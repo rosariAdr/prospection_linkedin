@@ -19,6 +19,14 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
   existé (PL-08).
 - `AGENTS.md` §7 décrit l'état réel : initialisation, source de vérité, règles contrôlées par le
   code ou procédurales (PL-03, PL-04, PL-06).
+- Les clés de déduplication (`cle_contenu`, `cle_secours`) et la clé `__doneKeys` du harvester
+  portent sur le corps du post seul, coupé après le dernier horodatage : un post recapturé une
+  semaine plus tard (date relative et lien `lnkd.in` changés) est reconnu, et le second post d'un
+  même auteur n'est plus sauté en silence (PL-01, PL-15). Les clés déjà enregistrées dans un MASTER
+  ou un CSV ne correspondent plus ; seules celles tirées des JSON bruts de `runs/` sont
+  recalculées (voir `docs/04`).
+- `scripts/harvester.js` ne se termine plus par des restes de bloc Markdown, qui le rendaient
+  invalide en JavaScript.
 
 ### Ajouté
 - `tests/test_run.py` : tests fonctionnels de `prepare` et `finaliser` sur un faux dépôt temporaire
