@@ -88,8 +88,9 @@ data/  runs/          données réelles, non versionnées (voir data/README.md)
 
 Les posts collectés contiennent des noms, des profils et des adresses de **personnes tierces** qui
 n'ont pas consenti à figurer dans un dépôt. `data/` et `runs/` sont donc **entièrement exclus de
-git** par le `.gitignore`. Aucune vérification automatique ne le garantit encore (ni intégration
-continue, ni hook pre-commit) : un `git add -f` passerait. `git ls-files data runs` ne doit lister
+git** par le `.gitignore`. Un `git add -f` passerait le `.gitignore` : la porte le rattrape
+(`tests/test_anti_fuite.py`, lancé en local et en intégration continue à chaque PR), mais aucun
+hook pre-commit ne l'empêche encore au moment du commit. `git ls-files data runs` ne doit lister
 que `data/README.md`, `data/.gitkeep` et `runs/.gitkeep`. Le dépôt porte la méthode, jamais les
 données.
 
