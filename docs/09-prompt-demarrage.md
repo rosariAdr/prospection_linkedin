@@ -67,7 +67,14 @@ Commence par la PHASE 0.
 Lance un run <hebdomadaire|complet> : les mots-clés du search plan en filtre <past-week|past-month>,
 déduplication contre le MASTER, scoring avec les règles en vigueur, rédaction des messages pour les
 retenus, puis livraison du delta + MASTER mis à jour. 3 sous-agents en parallèle, un onglet chacun.
+Commence par `python -m prospection.run poste --run <id>`, puis `lots --run <id>`. Les agents
+écrivent dans le dossier du run et lisent la config aux chemins absolus affichés par `lots --run`
+et `prepare`, jamais à un chemin deviné.
+<Données partagées : --donnees "<dossier>" à chaque commande.>
 ```
+
+Mode opératoire et commandes : `10-run-recurrent.md` (§7 pour les données partagées entre
+plusieurs PC).
 
 **Run de découverte de vocabulaire :**
 ```
@@ -78,6 +85,6 @@ MASTER pour ré-ajuster les règles. Présente-moi un rapport des changements.
 
 **Intégrer de nouveaux labels :**
 ```
-Voici le MASTER avec mes nouvelles annotations. Relis les colonnes validation/motif, dis-moi quelles
-règles cela ajoute ou modifie, et applique-les après ma validation.
+Voici le MASTER du classeur le plus récent, avec mes nouvelles annotations. Relis les colonnes
+validation/motif, dis-moi quelles règles cela ajoute ou modifie, et applique-les après ma validation.
 ```

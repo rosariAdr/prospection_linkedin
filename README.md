@@ -44,6 +44,21 @@ python -m pytest tests -q
 seuils, blacklist, search plan. Les scripts le lisent, les documents l'expliquent — rien n'y est
 recopié ailleurs.
 
+**Plusieurs PC.** Le code vient de GitHub ; les données peuvent vivre dans un dossier partagé
+hors du dépôt (Google Drive pour ordinateur, par exemple `G:\Mon Drive\prospection\donnees`),
+désigné par `--donnees` ou par la variable `PROSPECTION_DONNEES`. La config est alors le
+`config.yaml` de ce dossier.
+
+```powershell
+python -m prospection.run initialiser-donnees --vers "G:\Mon Drive\prospection\donnees"  # une fois
+python -m prospection.run poste                                                          # sur chaque PC
+```
+
+Chaque commande annonce son mode en première ligne. En mode partagé, `lots --run` et `prepare`
+affichent les chemins à donner aux agents, un verrou évite qu'un PC lance un run pendant qu'un
+autre n'a pas fini, et `finaliser` calcule sa base (`--base` facultatif). Mise en place d'un PC,
+migration et règles : [`docs/10-run-recurrent.md`](docs/10-run-recurrent.md) §7.
+
 ## Un run
 
 ```bash
@@ -62,18 +77,22 @@ Mode opératoire détaillé : [`docs/10-run-recurrent.md`](docs/10-run-recurrent
 prospection/        le package : clés, dates, config, dédup, garde-fous, classeur, orchestration
   cles.py           empreintes de déduplication (contenu, secours, URL)
   dates.py          lecture des dates relatives LinkedIn + fenêtrage
-  config.py         chargement et validation de data/config.yaml
+  config.py         chargement et validation de la config
   dedup.py          déduplication d'un run contre l'historique
   verify.py         garde-fous bloquants avant livraison
   workbook.py       MASTER / DELTA / SUIVI_LEADS
-  run.py            prepare · finaliser · lots
+  run.py            prepare · finaliser · lots · verrou · poste · initialiser-donnees
+  emplacements.py   mode local, ou dossier de données partagé hors du dépôt
+  verrou.py         verrou de run sur le dossier partagé
+  poste.py          contrôle d'un PC avant un run
+  migration.py      création du dossier partagé, migration de data/ et runs/
 scripts/harvester.js  le code injecté dans la page LinkedIn — fait foi
 docs/                 01 processus · 02 config · 03 scoring et induction des règles
                       04 recette de scraping · 05 messages · 06 classeur · 07 automatisations
                       08 retour d'expérience chiffré · 09 démarrer un profil · 10 run récurrent
 templates/            le gabarit de configuration, anonymisé
 tests/                45 tests — chacun correspond à un bug rencontré en production
-data/  runs/          données réelles, non versionnées (voir data/README.md)
+data/  runs/          données réelles du mode local, non versionnées (voir data/README.md)
 ```
 
 ## Pré-requis

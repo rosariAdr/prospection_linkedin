@@ -14,6 +14,22 @@ runs/*
 *.xlsx
 *.xlsm
 *.csv
+*.pdf
+
+# Mode partagé (dossier de données sur un Drive, plusieurs PC) : si une copie de ce dossier
+# atterrit dans le dépôt, rien n'entre dans git. Mêmes motifs que tests/test_anti_fuite.py.
+historique
+classeurs
+# `runs` à toute profondeur SAUF la racine (runs/* et !runs/.gitkeep plus haut) : un motif
+# `runs/` exclurait le dossier lui-même, et !runs/.gitkeep ne pourrait plus le réinclure.
+*/**/runs
+verrou*.json
+.prospection-donnees
+MIGRE_VERS_PARTAGE.txt
+# la config d'un profil : seul un gabarit `templates/<nom>.example.yaml` est versionné ; une
+# vraie config posée à côté du gabarit (templates/config.yaml) reste ignorée
+config*.yaml
+!/templates/*.example.yaml
 
 # Python
 __pycache__/

@@ -48,8 +48,10 @@ Cette séparation est essentielle : un deal-breaker n'est **pas** un malus, sino
 - Le distanciel ne rattrape pas un diplôme à obligation de présentiel.
 
 **F4 — Historique** : blacklist + organisations « en observation » (une seconde chance avant
-exclusion). La liste vit dans `data/config.yaml`, section `blacklist` (`organisations` et
-`en_observation`), et nulle part ailleurs : c'est là que `prospection.run finaliser` la lit pour
+exclusion). La liste vit dans la config, section `blacklist` (`organisations` et
+`en_observation`), et nulle part ailleurs. La config est `data/config.yaml` en mode local, le
+`config.yaml` du dossier de données en mode partagé ; `lots --run` et `prepare` affichent son
+chemin absolu (`10-run-recurrent.md` §7). C'est là que `prospection.run finaliser` la lit pour
 écarter d'office une organisation blacklistée. Elle **doit être relue à chaque run** : une ligne
 oubliée ici, et une organisation écartée ressort en tête du classement au run suivant. Un ancien
 fichier `data/blacklist.md` n'est lu par aucun script : une organisation ajoutée seulement là
@@ -59,7 +61,7 @@ personne qui recrute publie sous son propre nom n'est donc écartée qu'au scori
 
 ## 3. La grille de score
 
-> **La grille chiffrée vit dans `data/config.yaml`, section `scoring`, et nulle part ailleurs.**
+> **La grille chiffrée vit dans la config, section `scoring`, et nulle part ailleurs.**
 > Les scripts la lisent, ce document l'explique. Avant la v1.0 elle était recopiée dans trois
 > fichiers : la dérive a fini par faire disparaître la blacklist des règles réellement
 > appliquées, et une organisation blacklistée est ressortie en tête de classement (03/09/2026).

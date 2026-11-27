@@ -35,6 +35,46 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
   vers `dev` ou `main` et à chaque push sur ces branches, sous Python 3.10 et 3.13.
   `tests/test_anti_fuite.py` la fait échouer si une donnée personnelle (`data/`, `runs/`, classeur,
   export) ou une copie de travail `.claude/` est suivie par git (PL-08).
+- **Données partagées entre plusieurs PC** (`prospection/emplacements.py`) : `--donnees <dossier>`
+  (avant ou après la sous-commande) ou la variable `PROSPECTION_DONNEES` désignent un dossier hors
+  du dépôt, synchronisé par un Drive. Chaque commande annonce son mode en première ligne ; sans
+  l'un ni l'autre, le mode local est inchangé. Un dossier situé dans le dépôt ou dans un arbre git
+  est refusé. Mode opératoire : `docs/10-run-recurrent.md` §7.
+- `initialiser-donnees --vers <dossier>` crée le dossier partagé (`config.yaml`, `historique/`,
+  `runs/`, `classeurs/`, marqueur) et y copie la config, les CSV d'historique, les JSON des runs et
+  le dernier classeur, sans rien écraser. Il dépose `data/MIGRE_VERS_PARTAGE.txt`, qui arrête
+  ensuite le mode local, et affiche la commande qui pose la variable, sans la poser (toute
+  apostrophe du chemin doublée, typographique comprise). Un lecteur non monté est annoncé comme
+  tel.
+- `poste [--run R]` contrôle un PC avant un run (Python, dépendances, dossier de données, variable
+  sous Windows, config, historique, copies en conflit, verrou, run visé, classeur, état du code) :
+  une ligne `OK`, `AVERTISSEMENT` ou `BLOQUANT` par contrôle, code 2 s'il y a un bloquant. Elle ne
+  nomme jamais le profil, ni un fichier de config autre que `config.yaml`.
+- Verrou de run sur le dossier partagé (`prospection/verrou.py`) : pris par `lots --run`,
+  rafraîchi par `prepare` et `finaliser`, libéré par `finaliser` ; occupé, code 3. `verrou
+  statut|prendre|liberer` pour un run abandonné. Il couvre l'oubli, pas la course à la seconde.
+  Une libération refusée par le Drive laisse le run finalisé (code 0) et donne la commande
+  `verrou liberer --run R` à relancer.
+- Mode partagé : identifiant de run strict (`JJ-MM-AAAA`, ou `JJ-MM-AAAA-n` avec n ≥ 2) ; un run
+  n'écrit que ses propres fichiers (`runs/<run>/`, `historique/DELTA_<run>.csv`,
+  `classeurs/prospection_<run>.xlsx`), par un temporaire puis un remplacement, le DELTA en
+  dernier. `finaliser` calcule sa base (`--base` facultatif) et le MASTER (base, plus lignes
+  d'historique manquantes filtrées par F4, plus run courant), et affiche le nombre de lignes
+  réinjectées, 0 en régime normal. Un fichier illisible, une copie en conflit dans `historique/`,
+  dans `classeurs/` ou sur la config, un classeur postérieur ou ouvert dans Excel, une base
+  disparue avant l'écriture bloquent (code 2). Refinaliser garde les labels du MASTER, de
+  SUIVI_LEADS et de l'onglet DELTA du run. La config est `config.yaml` du dossier de données :
+  `--config` est refusé.
+- `lots --run R` crée le dossier du run et affiche, comme `prepare`, les chemins absolus du dossier
+  du run et de la config, à coller dans les prompts des agents. En mode partagé, comme `prepare`,
+  il refuse un run déjà finalisé (code 2) ou préparé sur un autre poste (code 3), sauf `--forcer`.
+- Les CSV d'historique se lisent en `utf-8-sig` : un BOM ajouté par Excel ne masque plus la
+  première colonne. Les fichiers de travail `~$…` et `….tmp` ne sont jamais lus.
+- `tests/test_anti_fuite.py` et `.gitignore` refusent aussi les fichiers d'un dossier partagé
+  (segments `runs`, `historique`, `classeurs`, `verrou*.json`, marqueurs), toute config
+  `config*.yaml` sauf un gabarit `templates/<nom>.example.yaml`, et les PDF. `tests/conftest.py` retire `PROSPECTION_DONNEES` de l'environnement de
+  chaque test. Nouveaux tests : emplacements, verrou, poste, migration, lignes d'historique
+  antérieures, et un scénario sur plusieurs PC, en données fictives dans un dossier temporaire.
 
 ## [1.0.0] — 2026-09-24
 
