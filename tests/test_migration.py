@@ -8,7 +8,6 @@ import argparse
 import csv
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -305,28 +304,35 @@ def _powershell():
 @pytest.mark.skipif(_powershell() is None, reason="PowerShell absent")
 def test_la_commande_affichee_s_analyse_sans_erreur_dans_powershell(tmp_path):
     """Analyse seule (Parser::ParseFile), rien n'est exécuté : la commande, avec ' et ’ dans le
-    chemin, ne produit aucune erreur et le littéral garde le chemin entier."""
+    chemin, ne produit aucune erreur et le littéral garde le chemin entier.
+
+    Le résultat passe par un fichier JSON, pas par la console : sous Linux, `pwsh` alimenté par
+    l'entrée standard glisse des séquences de terminal (`ESC[?1h ESC[?1l`) dans sa sortie, ce
+    qui faisait échouer la version précédente de ce test en CI alors que l'analyse était bonne.
+    """
     chemin = "G:\\Mon Drive\\l\u2019equipe d'Alpha\\donnees"
     script = tmp_path / "commande.ps1"
     script.write_text(commande_powershell(chemin), encoding="utf-8-sig")
+    sortie = tmp_path / "analyse.json"
     # le code d'analyse passe par l'entrée standard (`-Command -`) : aucun script n'est lancé, et
-    # la commande à analyser n'est que lue (ParseFile), jamais exécutée
+    # la commande à analyser n'est que lue (ParseFile), jamais exécutée. Les littéraux sont écrits
+    # en codes de caractères : ni la console ni l'encodage du fichier n'abîment ’ ou les accents.
     analyse = "\n".join([
         "$e = $null; $t = $null",
         f"$ast = [System.Management.Automation.Language.Parser]::ParseFile('{script}', [ref]$t, [ref]$e)",
         "$s = $ast.FindAll({ param($n) $n -is "
         "[System.Management.Automation.Language.StringConstantExpressionAst] }, $true)",
-        "[Console]::Out.WriteLine('erreurs=' + $e.Count)",
-        "foreach ($x in $s) { [Console]::Out.WriteLine(([int[]][char[]]$x.Value) -join ',') }",
+        "$v = @(foreach ($x in $s) { ([int[]][char[]]$x.Value) -join ',' })",
+        "$r = @{ erreurs = $e.Count; valeurs = $v } | ConvertTo-Json -Depth 3",
+        f"[System.IO.File]::WriteAllText('{sortie}', $r)",
         "",
     ])
     p = subprocess.run([_powershell(), "-NoProfile", "-NonInteractive", "-Command", "-"],
                        input=analyse, capture_output=True, text=True, timeout=120)
-    lignes = p.stdout.split()
-    assert "erreurs=0" in lignes
-    # chaque littéral, en codes de caractères : la console n'abîme ni ’ ni les accents
-    valeurs = ["".join(chr(int(c)) for c in ligne.split(",")) for ligne in lignes
-               if re.fullmatch(r"\d+(,\d+)*", ligne)]
+    assert sortie.exists(), p.stdout + p.stderr
+    r = json.loads(sortie.read_text(encoding="utf-8-sig"))
+    assert r["erreurs"] == 0
+    valeurs = ["".join(chr(int(c)) for c in v.split(",")) for v in r["valeurs"]]
     assert chemin in valeurs
 
 
