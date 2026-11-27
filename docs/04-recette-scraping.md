@@ -101,8 +101,9 @@ Consigne obligatoire dans le prompt de chaque agent :
 > `tabs_create_mcp` et n'utilise QUE ce `tabId`. Ne ferme aucun autre onglet que le tien. »
 
 **Découpage** : 6 à 15 mots-clés par agent. Chaque agent **écrit lui-même son JSON sur disque**
-(`runs/<date>/L<n>.json`) et ne renvoie qu'un résumé de 3-5 lignes — sinon le contexte de
-l'orchestrateur explose.
+(`<dossier du run>/L<n>.json`) et ne renvoie qu'un résumé de 3-5 lignes — sinon le contexte de
+l'orchestrateur explose. Le dossier du run est le chemin absolu affiché par `lots --run`, à
+coller tel quel dans le prompt de chaque agent (`10-run-recurrent.md` §2).
 
 ⚠️ **La parallélisation n'existe que si les appels `Agent` sont émis dans un seul et même bloc.**
 Un appel par message = exécution séquentielle, même avec trois agents.
@@ -193,7 +194,10 @@ Tout le reste est réutilisable tel quel.
 ## 12. Fin de mission — schéma JSON attendu de chaque agent
 
 Un agent de scraping ne renvoie **jamais** ses données dans sa réponse : il les écrit sur disque
-et répond par un résumé de 3 à 5 lignes. Format du fichier, identique pour tous les lots :
+et répond par un résumé de 3 à 5 lignes. Le fichier va dans le dossier du run, au chemin
+absolu affiché par `lots --run` (et rappelé par `prepare`) : `<dossier du run>/<LOT>.json`. En
+mode partagé, ce dossier est sur le Drive, pas sous `runs/` du dépôt : `prepare` ne lit que
+lui. Format du fichier, identique pour tous les lots :
 
 ```json
 {

@@ -37,7 +37,7 @@ se termine, et la personne ne le voit jamais.
 create_trigger:
   name: "Veille LinkedIn quotidienne"
   cron_expression: "0 16 * * 1-5"    # ⚠️ UTC — 18h Paris en été = 16h UTC
-  prompt: <instruction autonome et complète>
+  prompt: <instruction autonome et complète, --donnees compris en mode partagé>
   requires_local_device: true        # le run a besoin du Chrome de la personne
   notifications: {push: true, email: true}
 ```
@@ -45,10 +45,24 @@ create_trigger:
 ⚠️ **Le prompt d'une tâche planifiée doit être auto-suffisant** : chaque déclenchement démarre une
 session vierge. Il doit rappeler où trouver la config, la recette, le MASTER, et quoi livrer.
 
+**Données partagées entre plusieurs PC** (`10-run-recurrent.md` §7) :
+
+- **La tâche planifiée tourne sur un seul poste**, celui où Chrome et la session LinkedIn sont
+  ouverts au créneau choisi. Ne pas planifier de run sur un second PC : le verrou l'arrête s'il
+  est déjà synchronisé (code 3), mais deux postes qui démarrent avant que le Drive ait
+  synchronisé le verrou le prennent tous les deux. Il couvre l'oubli, pas la course à la seconde.
+- **Le prompt passe `--donnees` explicitement** à chaque commande
+  (`--donnees "G:\Mon Drive\prospection\donnees"`), sans compter sur la variable : une session
+  lancée avant que la variable soit posée ne la voit pas, et tomberait en mode local (arrêté par
+  `MIGRE_VERS_PARTAGE.txt` sur le PC migré, sans config ailleurs).
+- Le prompt commence par `python -m prospection.run poste --run <id>`, et s'arrête sur un
+  `BLOQUANT`.
+
 ## 4. La dépendance au navigateur (contrainte majeure)
 
 Le run n'aboutit que si l'ordinateur est allumé, Chrome ouvert, extension connectée et session
-LinkedIn active. Choisir un créneau où c'est **certain** (fin de journée, pas 3 h du matin).
+LinkedIn active. En mode partagé, il faut aussi le Drive démarré et à jour sur ce poste.
+Choisir un créneau où c'est **certain** (fin de journée, pas 3 h du matin).
 
 **Procédure de repli, à encoder dans chaque tâche planifiée :**
 1. Vérifier la connexion navigateur.
@@ -57,6 +71,15 @@ LinkedIn active. Choisir un créneau où c'est **certain** (fin de journée, pas
    Ne jamais boucler indéfiniment sans notifier.
 3. Si déconnexion en cours de run : attendre 45-90 s, reconnecter, reprendre au mot-clé suivant,
    jamais depuis le début.
+4. En mode partagé, si `poste --run <id>` signale un `BLOQUANT` (Drive non monté, fichier
+   « en ligne uniquement », verrou tenu ailleurs, run déjà finalisé ou préparé sur un autre
+   poste) : notifier, ne pas lancer. Une reprise du même run garde le même identifiant : le
+   verrou de ce poste est simplement rafraîchi. Un run déjà finalisé ne se reprend pas : prendre
+   l'identifiant suivant (`JJ-MM-AAAA-n`).
+
+⚠️ Un run resté inachevé garde le verrou. Sur le même poste, un run d'un **autre** identifiant
+sort en code 3 tant que ce verrou n'a pas expiré (12 h sans activité). Finir le run inachevé, ou
+le libérer : `python -m prospection.run verrou liberer --run <id inachevé>`.
 
 > **Retour d'expérience** : les déconnexions (mises en veille du PC) ont été l'incident le plus
 > fréquent, et de loin — bien avant les limitations LinkedIn, jamais atteintes. Une interruption a

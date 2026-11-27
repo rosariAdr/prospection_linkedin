@@ -3,6 +3,9 @@
 ## Déclencheur
 Score > seuil de rédaction **et** aucun filtre déclenché → les 5 textes sont produits.
 Seule exception : `reponse_mail` n'existe que si une adresse figure dans le post.
+Le seuil est `scoring.seuil_redaction`, dans la config dont `prepare` affiche le chemin absolu.
+Les textes vont dans `<dossier du run>/scored_<LOT>.json`, au dossier affiché par la même
+commande (`10-run-recurrent.md` §4).
 
 ---
 
